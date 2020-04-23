@@ -65,6 +65,11 @@ pipeline {
             prepareRelease(){
               sh 'rake release'
             }
+            prepareRelease(){
+              catchError(buildResult: 'SUCCESS', message: 'Update branch task failed', stageResult: 'UNSTABLE') {
+                sh 'rake release:update_branch'
+              }
+            }
           }
         }
       }        
