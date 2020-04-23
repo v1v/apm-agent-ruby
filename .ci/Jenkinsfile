@@ -61,7 +61,6 @@ pipeline {
       stages {
         stage('Release') {
           steps {
-            unstash 'source'
             prepareRelease(){
               sh 'rake release'
             }
