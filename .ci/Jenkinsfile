@@ -62,7 +62,7 @@ pipeline {
         stage('Release') {
           steps {
             prepareRelease(){
-              sh 'rake release'
+              sh 'rake release --trace'
             }
             prepareRelease(){
               catchError(buildResult: 'SUCCESS', message: 'Update branch task failed', stageResult: 'UNSTABLE') {
