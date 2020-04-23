@@ -1,19 +1,6 @@
 #!/usr/bin/env groovy
 @Library('apm@current') _
 
-import co.elastic.matrix.*
-import groovy.transform.Field
-
-/**
- This is required to know if there any failures when running the downstream jobs.
-*/
-@Field def rubyTasksFailed = false
-
-/**
- This is required to store the build status for the downstream jobs.
-*/
-@Field def rubyDownstreamJobs = [:]
-
 pipeline {
   agent { label 'linux && immutable' }
   environment {
@@ -61,9 +48,6 @@ pipeline {
       stages {
         stage('Release') {
           steps {
-            prepareRelease(){
-              sh 'rake release --trace'
-            }
             prepareRelease(){
               catchError(buildResult: 'SUCCESS', message: 'Update branch task failed', stageResult: 'UNSTABLE') {
                 sh 'rake release:update_branch'
