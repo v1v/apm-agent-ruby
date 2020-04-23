@@ -41,13 +41,6 @@ pipeline {
     rateLimitBuilds(throttle: [count: 60, durationName: 'hour', userBoost: true])
     quietPeriod(10)
   }
-  triggers {
-    issueCommentTrigger('(?i).*(?:jenkins\\W+)?run\\W+(?:the\\W+)?tests(?:\\W+please)?.*')
-  }
-  parameters {
-    booleanParam(name: 'Run_As_Master_Branch', defaultValue: false, description: 'Allow to run any steps on a PR, some steps normally only run on master branch.')
-    booleanParam(name: 'bench_ci', defaultValue: true, description: 'Enable run benchmarks.')
-  }
   stages {
     /**
     Checkout the code and stash it, to use it on other stages.
@@ -55,10 +48,8 @@ pipeline {
     stage('Checkout') {
       options { skipDefaultCheckout() }
       steps {
-        pipelineManager([ cancelPreviousRunningBuilds: [ when: 'PR' ] ])
         deleteDir()
         gitCheckout(basedir: "${BASE_DIR}", githubNotifyFirstTimeContributor: true, reference: "${env.REFERENCE_REPO}")
-        stash allowEmpty: true, name: 'source', useDefaultExcludes: false
       }
     }
     stage('Release') {
@@ -70,10 +61,9 @@ pipeline {
       stages {
         stage('Release') {
           steps {
-            deleteDir()
             unstash 'source'
             prepareRelease(){
-              sh 'git config -l'
+              sh 'rake release'
             }
           }
         }
@@ -91,12 +81,15 @@ def prepareRelease(Closure body){
   dir("${env.BASE_DIR}"){
     docker.image("${env.RUBY_DOCKER_TAG}").inside('-v ${REFERENCE_REPO}:${REFERENCE_REPO} -v /etc/passwd:/etc/passwd -v ${HOME}/.ssh:${HOME}/.ssh') {
       withEnv(["HOME=${env.WORKSPACE}/${env.BASE_DIR ?: ''}", "BRANCH_NAME=master"]) {
-        rubygemsLogin.withApi(secret: "${env.RELEASE_SECRET}") {
+        //rubygemsLogin.withApi(secret: "${env.RELEASE_SECRET}") {
+          withCredentials([file(credentialsId: 'rubygems_file', variable: 'location')]) {
+            sh 'mkdir .gem && cp ${location} .gem/ && chmod 0600 .gem/*'
+          }
           withGitRelease(credentialsId: '2a9602aa-ab9f-4e52-baf3-b71ca88469c7-UserAndToken') {
             sh 'gem install rake yard rspec'
             body()
           }
-        }
+        //}
       }
     }
   }
